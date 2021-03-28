@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#привет
+# just check possible changes on GitHub
 
 
 # test whether there is redirected input
