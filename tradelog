@@ -1,29 +1,11 @@
 #!/bin/sh
 
-<<<<<<< HEAD
 # test whether there is redirected input
 if ! test -t 0; then
     while IFS= read -r line; do
       LOG_FILES="$LOG_FILES$line\n"
     done
     echo $LOG_FILES
-=======
-# no in POSIX
-#####################
-if [ "Hello" > "Hi" ];
-then
-  echo "It works"
-fi
-#####################
-x
-# test whether there is redirected input
-if test -t 0; then
-   A=''
-else
-    while IFS= read -r line; do
-    LOG_FILES="$LOG_FILES$line\n"
-    done
->>>>>>> racc/master
 fi
 
 
@@ -36,7 +18,6 @@ print_help()
 	echo "       tradelog [FILTER...] [COMMAND] [LOG...]"
 	echo ""
 }
-<<<<<<< HEAD
 
 COMMAND=""
 WIDTH=""
@@ -45,19 +26,11 @@ TICKER=""
 COUNT=1
 # parsing our possible parameters
 while getopts :abt:w:h-: opts
-=======
-COMMAND=""
-WIDTH=""
-TICKER=""
-# parsing our possible parameters
-while getopts :abt:wh-: opts
->>>>>>> racc/master
 do case "$opts" in
    a) echo "a";;
    b) echo "b";;
    t) TICKER=$TICKER"$OPTARG;"
       TFLAG=1;;
-<<<<<<< HEAD
    w) if [ $COUNT -gt 0 ]  # more than one occurrence
         then
           WIDTH=$OPTARG
@@ -72,9 +45,6 @@ do case "$opts" in
         exit 1
     fi
     ;;
-=======
-   w) echo "w";;
->>>>>>> racc/master
    h) print_help
       exit 0;;
    -) print_help
@@ -121,18 +91,8 @@ if [ "$TFLAG" = "1" ]; then
     echo "$LOG_FILES"
 fi
 
-<<<<<<< HEAD
-=======
-
->>>>>>> racc/master
 if [ "$COMMAND" = "list-tick" ]; then
     LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{print $2}' | sort -u)
 fi
 
-<<<<<<< HEAD
-=======
-echo $LOG_FILES
-
-# 1) RENAME TRADELOG.SH -> TRADELOG
-# 2)
->>>>>>> racc/master
+# 1) To fix the last new line in the logs
