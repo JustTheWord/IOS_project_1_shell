@@ -1,0 +1,95 @@
+#!/bin/sh
+
+# no in POSIX
+#####################
+if [ "Hello" > "Hi" ];
+then
+  echo "It works"
+fi
+#####################
+x
+# test whether there is redirected input
+if test -t 0; then
+   A=''
+else
+    while IFS= read -r line; do
+    LOG_FILES="$LOG_FILES$line\n"
+    done
+fi
+
+
+export POSIXLY_CORRECT=yes
+export LC_NUMERIC=en_US.UTF-8
+
+print_help()
+{
+    echo "Usage: tradelog [-h|--help]"
+	echo "       tradelog [FILTER...] [COMMAND] [LOG...]"
+	echo ""
+}
+COMMAND=""
+WIDTH=""
+TICKER=""
+# parsing our possible parameters
+while getopts :abt:wh-: opts
+do case "$opts" in
+   a) echo "a";;
+   b) echo "b";;
+   t) TICKER=$TICKER"$OPTARG;"
+      TFLAG=1;;
+   w) echo "w";;
+   h) print_help
+      exit 0;;
+   -) print_help
+      exit 0;;
+   *) echo "Invalid flag"
+      exit 1;;
+   esac
+done
+
+shift $(($OPTIND - 1))
+
+# initialize value for the command and delete argument
+case $1 in
+  list-tick | profit | pos | last-price | hist-ord | graph-pos)
+    COMMAND=$1
+    shift
+    ;;
+esac
+
+# unzipping our logs
+while [ $# -gt 0 ]
+  do
+    case $1 in
+      *.log.gz)
+        LOG_FILES="$LOG_FILES$(gzip -d -c "$1")\n"
+        shift
+        continue
+        ;;
+      *.log)
+        LOG_FILES="$LOG_FILES$(cat "$1")\n"
+        shift
+        continue
+        ;;
+      *)
+        echo "Invalid argument"
+        exit 1
+        ;;
+    esac
+  done
+
+# checking flags of filters
+if [ "$TFLAG" = "1" ]; then
+    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v ticker="$TICKER" 'ticker~ $2";" {print}')
+    echo "$LOG_FILES"
+fi
+
+
+if [ "$COMMAND" = "list-tick" ]; then
+    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{print $2}' | sort -u)
+fi
+
+echo $LOG_FILES
+
+# 1) RENAME TRADELOG.SH -> TRADELOG
+# 2)
