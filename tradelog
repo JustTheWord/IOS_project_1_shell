@@ -1,16 +1,18 @@
 #!/bin/sh
 
+export POSIXLY_CORRECT=yes
+export LC_NUMERIC=en_US.UTF-8
+
 # test whether there is redirected input
 if ! test -t 0; then
     while IFS= read -r line; do
       LOG_FILES="$LOG_FILES$line\n"
     done
-    echo $LOG_FILES
+    # deleting the last "\n" empty line by means of NF(number of fields in a line)
+    ## Sorry for such a coding style :(
+    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{ if (NF == 0) {next}
+                                                  else {print} }')
 fi
-
-
-export POSIXLY_CORRECT=yes
-export LC_NUMERIC=en_US.UTF-8
 
 print_help()
 {
@@ -41,7 +43,7 @@ do case "$opts" in
           WFLAG=1
           COUNT=$(( $COUNT - 1 ))
      else
-        echo "More occurrences than was expected"
+        echo "More occurrences of option than was expected"
         exit 1
     fi
     ;;
@@ -85,14 +87,45 @@ while [ $# -gt 0 ]
     esac
   done
 
+# delete all empty lines
+LOG_FILES=$(echo "$LOG_FILES" | sed '/^$/d')
+
+
 # checking flags of filters
 if [ "$TFLAG" = "1" ]; then
-    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v ticker="$TICKER" 'ticker~ $2";" {print}')
-    echo "$LOG_FILES"
+    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v last_price="$TICKER" ' last_price~ $2";" {print}')
 fi
 
 if [ "$COMMAND" = "list-tick" ]; then
     LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{print $2}' | sort -u)
 fi
 
-# 1) To fix the last new line in the logs
+if [ "$COMMAND" = "profit" ]; then
+    PROFIT=$(echo "$LOG_FILES" | awk -F ';' 'BEGIN {bought=0; sold=0}
+                                            {
+                                            if ($3 == "buy")
+                                                 {bought += ($4 * $6)}
+                                            else {sold += ($4 * $6)}
+                                            }
+                                            END {printf("%.2f\n", sold - bought)}')
+    echo $PROFIT
+    exit 0
+fi
+
+if [ "$COMMAND" = "last-price" ]; then
+    LAST_PRICE=$(echo "$LOG_FILES" | awk -F ';' '{ tickers[$2]=$4 }
+                                                  END { for (last_price in tickers)
+                                                            {
+                                                            printf("%s %c %.2f\n", last_price, ":", tickers[last_price])
+                                                            }
+                                                       }' | sort -u)
+    echo "$LAST_PRICE"
+fi
+#echo "$LOG_FILES"
+
+
+
+
+# 1) to pick up flags for redirected input to output the logs
+# 2) -a|-b   : Zly format casu a datumu (spravne ma byt YYYY-MM-DD HH:MM:SS)
+# 3)
