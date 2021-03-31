@@ -10,8 +10,8 @@ if ! test -t 0; then
     done
     # deleting the last "\n" empty line by means of NF(number of fields in a line)
     ## Sorry for such a coding style :(
-    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{ if (NF == 0) {next}
-                                                  else {print} }')
+#    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{ if (NF == 0) {next}
+#                                                  else {print} }')
 fi
 
 print_help()
@@ -37,7 +37,7 @@ do case "$opts" in
         then
           WIDTH=$OPTARG
           if ! echo "$WIDTH" | grep -qE '^[0-9]+$'; then
-              echo "WIDTH IS NOT INTEGER OR POSSITIVE"
+              echo "PARAMETER OF 'WIDTH' IS NOT INTEGER OR POSSITIVE"
               exit 1
           fi
           WFLAG=1
@@ -98,6 +98,8 @@ fi
 
 if [ "$COMMAND" = "list-tick" ]; then
     LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{print $2}' | sort -u)
+    echo "$LOG_FILES"
+    exit 0
 fi
 
 if [ "$COMMAND" = "profit" ]; then
@@ -114,16 +116,51 @@ fi
 
 if [ "$COMMAND" = "last-price" ]; then
     LAST_PRICE=$(echo "$LOG_FILES" | awk -F ';' '{ tickers[$2]=$4 }
-                                                  END { for (last_price in tickers)
+                                                  END { for (last_price in tickers) {
+                                                            if (length(tickers[last_price]) > longest)
                                                             {
-                                                            printf("%s %c %.2f\n", last_price, ":", tickers[last_price])
+                                                              longest = length(tickers[last_price])
+                                                              }
+                                                            };
+
+                                                  for (last_price in tickers)
+                                                            { x = 11 - length(last_price);
+                                                            printf("%s %"x"c %"longest".2f\n", last_price, ":", tickers[last_price])
                                                             }
                                                        }' | sort -u)
     echo "$LAST_PRICE"
+    exit 0
 fi
-#echo "$LOG_FILES"
+
+if [ "$COMMAND" = "pos" ]; then
+  POS=$(echo "$LOG_FILES" | awk -F ';' '{ tickers[$2]=$4 }
+                                        { if ($3 == "buy")
+                                            {positions[$2] += $6}
+                                          else {positions[$2] -= $6}
+                                        }
+                                                  END { for (keys in positions)
+                                                          { new_tickers[keys] = tickers[keys] * positions[keys] }
+                                                  for (pos in new_tickers)
+                                                            { x = sprintf("%.2f", new_tickers[pos]);
+                                                            if (length(x) > longest)
+                                                            {
+                                                             longest = length(x)
+                                                            }
+                                                            };
+
+                                                  for (pos in new_tickers)
+                                                            { x = 11 - length(pos);
+                                                            printf("%s %"x"c %"longest".2f\n", pos, ":", new_tickers[pos])
+                                                            }
+                                                       }' | sort -nrk3)
+  echo "$POS"
+  exit 0
+fi
 
 
+
+
+echo "$LOG_FILES"
 
 
 # 1) to pick up flags for redirected input to output the logs
