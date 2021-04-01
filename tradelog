@@ -264,17 +264,16 @@ if [ "$COMMAND" = "graph-pos" ]; then
 
               if (sharps > 1) {
                   str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
-                  printf("%d %-9s : %s\n", new_tickers[keys], keys, str)
+                  printf("%-9s : %s\n", keys, str)
               }
 
               else if (sharps > 0 && sharps < 1) {
-                  printf("%d %-9s :\n", new_tickers[keys], keys)
+                  printf("%-9s :\n", keys)
               }
 
               else {
                   str=sprintf("%*c", sharps, "!"); gsub(" ","!",str);
-                  printf("%d %-9s : %s\n", new_tickers[keys], keys, str)
-#                  printf("%-9s : %s\n", keys, str)
+                  printf("%-9s : %s\n", keys, str)
               }
           }
       }
