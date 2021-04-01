@@ -181,31 +181,31 @@ fi
 if [ "$COMMAND" = "hist-ord" ]; then
   HIST_ORD=$(echo "$LOG_FILES" | awk -F ';' -v width="$WIDTH" '
 
-          {counts[$2]+=1}
+  {counts[$2]+=1}
 
-              END {
-                  if (width != "") {
-                      for (ticker in counts) {
-                          if (counts[ticker] > longest) {
-                              longest = counts[ticker];
-                          }
-                      };
-                      {
-                          for (ticker in counts) {
-                              times = counts[ticker];
-                              counts[ticker] = (times / longest) * width;
-                              str=sprintf("%*c", counts[ticker], "#"); gsub(" ","#",str);
-                              printf("%-9s : %s\n", ticker, str)
-                          }
-                      }
-                 }
-                 else {
-                     for (ticker in counts) {
-                         str=sprintf("%*c", counts[ticker], "#"); gsub(" ","#",str);
-                         printf("%-9s : %s\n", ticker, str)
-                     }
-                 }
-              }' | sort -u)
+      END {
+          if (width != "") {
+              for (ticker in counts) {
+                  if (counts[ticker] > longest) {
+                      longest = counts[ticker];
+                  }
+              };
+              {
+                  for (ticker in counts) {
+                      times = counts[ticker];
+                      counts[ticker] = (times / longest) * width;
+                      str=sprintf("%*c", counts[ticker], "#"); gsub(" ","#",str);
+                      printf("%-9s : %s\n", ticker, str)
+                  }
+              }
+         }
+         else {
+             for (ticker in counts) {
+                 str=sprintf("%*c", counts[ticker], "#"); gsub(" ","#",str);
+                 printf("%-9s : %s\n", ticker, str)
+             }
+         }
+      }' | sort -u)
 
   echo "$HIST_ORD"
   exit 0
@@ -251,6 +251,30 @@ if [ "$COMMAND" = "graph-pos" ]; then
               else {
                   str=sprintf("%*c", sharps, "!"); gsub(" ","!",str);
                   printf("%-9s : %s\n", keys, str)
+              }
+          }
+      }
+      else {
+          for (keys in positions) {
+              new_tickers[keys] = tickers[keys] * positions[keys];
+          }
+          average = 1000
+          for (keys in positions) {
+              sharps = new_tickers[keys] / average;
+
+              if (sharps > 1) {
+                  str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
+                  printf("%d %-9s : %s\n", new_tickers[keys], keys, str)
+              }
+
+              else if (sharps > 0 && sharps < 1) {
+                  printf("%d %-9s :\n", new_tickers[keys], keys)
+              }
+
+              else {
+                  str=sprintf("%*c", sharps, "!"); gsub(" ","!",str);
+                  printf("%d %-9s : %s\n", new_tickers[keys], keys, str)
+#                  printf("%-9s : %s\n", keys, str)
               }
           }
       }
