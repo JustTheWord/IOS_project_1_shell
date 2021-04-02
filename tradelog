@@ -14,11 +14,229 @@ if ! test -t 0; then
 #                                                  else {print} }')
 fi
 
-print_help()
-{
-    echo "Usage: tradelog [-h|--help]"
-	echo "       tradelog [FILTER...] [COMMAND] [LOG...]"
-	echo ""
+print_help() {
+  echo "NAME"
+  echo "     tradelog -- stock market log analyzer\n"
+  echo "SYNOPSIS"
+  echo "     tradelog [-h|--help]"
+	echo "              [FILTER] [COMMAND] [LOG [LOG2 [...]]\n"
+	echo "DESCRIPTION"
+  echo "     The tradelog is script for stock market system record analysis. The script"
+  echo "     filters records and provides statistics according to user input.\n"
+  echo "The COMMAND can be one of:\n"
+  echo "     list-tick"
+  echo "             Print a list of occurring stock exchange symbols so-called \"ticks\".\n"
+  echo "     profit"
+  echo "             Print a statement of total profit from closed positions.\n"
+  echo "     pos"
+  echo "             Print a list of values of currently held positions sorted in"
+  echo "             descending order by value.\n"
+  echo "     last-price"
+  echo "             Print a list of the last known price for each ticker.\n"
+  echo "     hist-ord"
+  echo "             Print a list of histogram of the number of transactions "
+  echo "             according to the ticker.\n"
+  echo "     graph-pos"
+  echo "             Print a list of graph of values of held positions
+             according to the ticker.\n"
+  echo "The FILTER can be a combination of the following:\n"
+  echo "      -a DATETIME
+             After: only records after this date are considered (without
+             this date). DATETIME is in the format YYYY-MM-DD HH:MM:SS.\n"
+  echo "      -b DATETIME
+             Before: only records BEFORE this date (without this date) are
+             considered.\n"
+  echo "      -t TICKER
+             Only records corresponding to the given ticker are considered.
+             With multiple occurrences of the switch, the set of all listed
+             ticker is taken.\n"
+  echo "      -w WIDTH
+             Sets the width of the graph listing, ie the length of the
+             longest line to WIDTH. Thus, WIDTH must be a positive
+             integer. Multiple occurrences of the switch is a
+             faulty start.\n"
+  echo "      -h, --help
+             Print help with a brief description of each command and switch.\n"
+  echo "AUTHOR"
+  echo "       Made by Egor Greb | xgrebe02"
+  echo "                                         02/04/2021                                       "
+}
+t_func() {
+  LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v last_price="$TICKER" ' last_price~ $2";" {print}')
+}
+
+list_tick_func() {
+  LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{print $2}' | sort -u)
+    echo "$LOG_FILES"
+    exit 0
+}
+
+profit_func() {
+  PROFIT=$(echo "$LOG_FILES" | awk -F ';' '
+
+  BEGIN { bought=0; sold=0 }
+  { if ($3 == "buy") {
+        bought += ($4 * $6)
+    }
+    else {
+        sold += ($4 * $6)
+    }
+  }
+  END {printf("%.2f\n", sold - bought)}')
+
+  echo "$PROFIT"
+  exit 0
+}
+
+last_price_func() {
+  LAST_PRICE=$(echo "$LOG_FILES" | awk -F ';' '
+
+  { tickers[$2]=$4 }
+  END {
+      for (last_price in tickers) {
+          if (length(tickers[last_price]) > longest) {
+              longest = length(tickers[last_price])
+          }
+      };
+      for (last_price in tickers) {
+          x = 11 - length(last_price);
+          printf("%s %"x"c %"longest".2f\n", last_price, ":", tickers[last_price])
+      }
+  }' | sort -u)
+
+  echo "$LAST_PRICE"
+  exit 0
+}
+
+pos_func() {
+  POS=$(echo "$LOG_FILES" | awk -F ';' '
+
+  { tickers[$2]=$4 }
+
+  { if ($3 == "buy" ) {
+      positions[$2] += $6
+    }
+    else {positions[$2] -= $6}
+  }
+  END {
+      for (keys in positions) {
+          new_tickers[keys] = tickers[keys] * positions[keys]
+      }
+      for (pos in new_tickers) {
+          x = sprintf("%.2f", new_tickers[pos]);
+          if (length(x) > longest) {
+              longest = length(x)
+          }
+      };
+      for (pos in new_tickers) {
+          x = 11 - length(pos);
+          printf("%s %"x"c %"longest".2f\n", pos, ":", new_tickers[pos])
+      }
+  }' | sort -nrk3)
+
+  echo "$POS"
+  exit 0
+}
+
+hist_ord_func() {
+  HIST_ORD=$(echo "$LOG_FILES" | awk -F ';' -v width="$WIDTH" '
+
+  {counts[$2]+=1}
+
+  END {
+      if (width != "") {
+          for (ticker in counts) {
+              if (counts[ticker] > longest) {
+                  longest = counts[ticker];
+              }
+          };
+          {
+              for (ticker in counts) {
+                  times = counts[ticker];
+                  counts[ticker] = (times / longest) * width;
+                  str=sprintf("%*c", counts[ticker], "#"); gsub(" ","#",str);
+                  printf("%-9s : %s\n", ticker, str)
+              }
+          }
+     }
+     else {
+         for (ticker in counts) {
+             str=sprintf("%*c", counts[ticker], "#"); gsub(" ","#",str);
+             printf("%-9s : %s\n", ticker, str)
+         }
+     }
+  }' | sort -u)
+
+  echo "$HIST_ORD"
+  exit 0
+}
+
+graph_pos_func() {
+  GRAPH_POS=$(echo "$LOG_FILES" | awk -F ';' -v width="$WIDTH" '
+  { tickers[$2]=$4 }
+
+  { if ($3 == "buy" ) {
+      positions[$2] += $6
+    }
+    else {positions[$2] -= $6}
+  }
+
+  END {
+      if (width != "") {
+
+          for (keys in positions) {
+              new_tickers[keys] = tickers[keys] * positions[keys];
+              tmp = new_tickers[keys];
+              if (tmp < 0) {
+                  tmp *= -1
+              }
+              if (tmp > max) {
+                  max = tmp;
+                  average = max / width;
+              }
+          };
+
+          for (keys in positions) {
+              sharps = new_tickers[keys] / average;
+
+              if (sharps > 1) {
+                  str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
+                  printf("%-9s : %s\n", keys, str)
+              }
+              else if (sharps > 0 && sharps < 1) {
+                  printf("%-9s :\n", keys)
+              }
+              else {
+                  str=sprintf("%*c", sharps, "!"); gsub(" ","!",str);
+                  printf("%-9s : %s\n", keys, str)
+              }
+          }
+      }
+      else {
+          for (keys in positions) {
+              new_tickers[keys] = tickers[keys] * positions[keys];
+          }
+          average = 1000
+          for (keys in positions) {
+              sharps = new_tickers[keys] / average;
+
+              if (sharps > 1) {
+                  str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
+                  printf("%-9s : %s\n", keys, str)
+              }
+              else if (sharps > 0 && sharps < 1) {
+                  printf("%-9s :\n", keys)
+              }
+              else {
+                  str=sprintf("%*c", sharps, "!"); gsub(" ","!",str);
+                  printf("%-9s : %s\n", keys, str)
+              }
+          }
+      }
+  }' | sort -u)
+
+  echo "$GRAPH_POS"
+  exit 0
 }
 
 COMMAND=""
@@ -26,15 +244,30 @@ WIDTH=""
 TICKER=""
 # For -w option
 COUNT=1
-# parsing our possible parameters
+# parsing our possible options and their parameters
 while getopts :abt:w:h-: opts
 do case "$opts" in
    a) echo "a";;
    b) echo "b";;
    t) TICKER=$TICKER"$OPTARG;"
-      TFLAG=1;;
-   w) if [ $COUNT -gt 0 ]  # more than one occurrence
-        then
+      #checking whether the format of a ticker is correct
+      if echo "$OPTARG" | grep -q '[[:lower:]]'; then
+          echo "Invalid '-t' parameter: $OPTARG"
+          echo "Input the right name of TICKER"
+          exit 1
+      elif echo "$OPTARG" | grep -q '[[:punct:]]'; then
+          echo "Invalid '-t' parameter: $OPTARG"
+          echo "Input the right name of TICKER"
+          exit 1
+      elif echo "$OPTARG" | grep -q '[[:digit:]]'; then
+          echo "Invalid '-t' parameter: $OPTARG"
+          echo "Input the right name of TICKER"
+          exit 1
+      else
+          TFLAG=1
+      fi
+      ;;
+   w) if [ $COUNT -gt 0 ]; then   # more than one occurrence
           WIDTH=$OPTARG
           if ! echo "$WIDTH" | grep -qE '^[0-9]+$'; then
               echo "PARAMETER OF 'WIDTH' IS NOT INTEGER OR POSSITIVE"
@@ -45,8 +278,7 @@ do case "$opts" in
      else
         echo "More occurrences of option than was expected"
         exit 1
-    fi
-    ;;
+     fi;;
    h) print_help
       exit 0;;
    -) print_help
@@ -93,198 +325,35 @@ LOG_FILES=$(echo "$LOG_FILES" | sed '/^$/d')
 
 # checking flags of filters
 if [ "$TFLAG" = "1" ]; then
-    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v last_price="$TICKER" ' last_price~ $2";" {print}')
+    t_func
 fi
 
 if [ "$COMMAND" = "list-tick" ]; then
-    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{print $2}' | sort -u)
-    echo "$LOG_FILES"
-    exit 0
+    list_tick_func
 fi
 
 if [ "$COMMAND" = "profit" ]; then
-    PROFIT=$(echo "$LOG_FILES" | awk -F ';' '
-
-    BEGIN { bought=0; sold=0 }
-
-    { if ($3 == "buy") {
-          bought += ($4 * $6)
-      }
-      else {
-          sold += ($4 * $6)
-      }
-    }
-
-    END {printf("%.2f\n", sold - bought)}')
-
-
-    echo "$PROFIT"
-    exit 0
+    profit_func
 fi
 
 if [ "$COMMAND" = "last-price" ]; then
-    LAST_PRICE=$(echo "$LOG_FILES" | awk -F ';' '
-
-    { tickers[$2]=$4 }
-
-    END {
-        for (last_price in tickers) {
-            if (length(tickers[last_price]) > longest) {
-                longest = length(tickers[last_price])
-            }
-        };
-
-        for (last_price in tickers) {
-            x = 11 - length(last_price);
-            printf("%s %"x"c %"longest".2f\n", last_price, ":", tickers[last_price])
-        }
-    }' | sort -u)
-
-
-    echo "$LAST_PRICE"
-    exit 0
+    last_price_func
 fi
 
 if [ "$COMMAND" = "pos" ]; then
-  POS=$(echo "$LOG_FILES" | awk -F ';' '
-
-  { tickers[$2]=$4 }
-
-  { if ($3 == "buy" ) {
-      positions[$2] += $6
-    }
-    else {positions[$2] -= $6}
-  }
-
-  END {
-      for (keys in positions) {
-          new_tickers[keys] = tickers[keys] * positions[keys]
-      }
-      for (pos in new_tickers) {
-          x = sprintf("%.2f", new_tickers[pos]);
-          if (length(x) > longest) {
-              longest = length(x)
-          }
-      };
-
-      for (pos in new_tickers) {
-          x = 11 - length(pos);
-          printf("%s %"x"c %"longest".2f\n", pos, ":", new_tickers[pos])
-      }
-  }' | sort -nrk3)
-
-
-  echo "$POS"
-  exit 0
+    pos_func
 fi
 
 if [ "$COMMAND" = "hist-ord" ]; then
-  HIST_ORD=$(echo "$LOG_FILES" | awk -F ';' -v width="$WIDTH" '
-
-  {counts[$2]+=1}
-
-      END {
-          if (width != "") {
-              for (ticker in counts) {
-                  if (counts[ticker] > longest) {
-                      longest = counts[ticker];
-                  }
-              };
-              {
-                  for (ticker in counts) {
-                      times = counts[ticker];
-                      counts[ticker] = (times / longest) * width;
-                      str=sprintf("%*c", counts[ticker], "#"); gsub(" ","#",str);
-                      printf("%-9s : %s\n", ticker, str)
-                  }
-              }
-         }
-         else {
-             for (ticker in counts) {
-                 str=sprintf("%*c", counts[ticker], "#"); gsub(" ","#",str);
-                 printf("%-9s : %s\n", ticker, str)
-             }
-         }
-      }' | sort -u)
-
-  echo "$HIST_ORD"
-  exit 0
+    hist_ord_func
 fi
 
 if [ "$COMMAND" = "graph-pos" ]; then
-  GRAPH_POS=$(echo "$LOG_FILES" | awk -F ';' -v width="$WIDTH" '
-  { tickers[$2]=$4 }
-
-  { if ($3 == "buy" ) {
-      positions[$2] += $6
-    }
-    else {positions[$2] -= $6}
-  }
-
-  END {
-      if (width != "") {
-
-          for (keys in positions) {
-              new_tickers[keys] = tickers[keys] * positions[keys];
-              tmp = new_tickers[keys];
-              if (tmp < 0) {
-                  tmp *= -1
-              }
-              if (tmp > max) {
-                  max = tmp;
-                  average = max / width;
-              }
-          };
-
-          for (keys in positions) {
-              sharps = new_tickers[keys] / average;
-
-              if (sharps > 1) {
-                  str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
-                  printf("%-9s : %s\n", keys, str)
-              }
-
-              else if (sharps > 0 && sharps < 1) {
-                  printf("%-9s :\n", keys)
-              }
-
-              else {
-                  str=sprintf("%*c", sharps, "!"); gsub(" ","!",str);
-                  printf("%-9s : %s\n", keys, str)
-              }
-          }
-      }
-      else {
-          for (keys in positions) {
-              new_tickers[keys] = tickers[keys] * positions[keys];
-          }
-          average = 1000
-          for (keys in positions) {
-              sharps = new_tickers[keys] / average;
-
-              if (sharps > 1) {
-                  str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
-                  printf("%-9s : %s\n", keys, str)
-              }
-
-              else if (sharps > 0 && sharps < 1) {
-                  printf("%-9s :\n", keys)
-              }
-
-              else {
-                  str=sprintf("%*c", sharps, "!"); gsub(" ","!",str);
-                  printf("%-9s : %s\n", keys, str)
-              }
-          }
-      }
-  }' | sort -u)
-
-  echo "$GRAPH_POS"
-  exit 0
+    graph_pos_func
 fi
 
-
-#echo "$LOG_FILES"
+echo "$LOG_FILES"
+exit 0
 
 
 # 1) to pick up flags for redirected input to output the logs
