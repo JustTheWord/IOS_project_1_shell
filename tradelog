@@ -8,10 +8,6 @@ if ! test -t 0; then
     while IFS= read -r line; do
       LOG_FILES="$LOG_FILES$line\n"
     done
-    # deleting the last "\n" empty line by means of NF(number of fields in a line)
-    ## Sorry for such a coding style :(
-#    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' '{ if (NF == 0) {next}
-#                                                  else {print} }')
 fi
 
 print_help() {
@@ -61,8 +57,28 @@ print_help() {
   echo "       Made by Egor Greb | xgrebe02"
   echo "                                         02/04/2021                                       "
 }
+
 t_func() {
   LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v last_price="$TICKER" ' last_price~ $2";" {print}')
+}
+
+date_func() {
+  a="$DAFLAG"
+  b="$DBFLAG"
+
+  if [ "$a" = "1" ] && [ "$b" = '0' ]; then
+    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v after="$AFTER" '
+        { if ($1 > after) {print}
+        }')
+  elif [ "$a" = "0" ] && [ "$b" = "1" ]; then
+    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v before="$BEFORE" '
+    { if ($1 < before) {print}
+    }')
+  else
+    LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v after="$AFTER" -v before="$BEFORE" '
+        { if (($1 > after) && ($1 < before)) {print}
+        }')
+  fi
 }
 
 list_tick_func() {
@@ -242,13 +258,31 @@ graph_pos_func() {
 COMMAND=""
 WIDTH=""
 TICKER=""
+DAFLAG=0
+DBFLAG=0
 # For -w option
 COUNT=1
 # parsing our possible options and their parameters
-while getopts abt:w:h-: opts
+while getopts :a:b:t:w:h-: opts
 do case "$opts" in
-   a) echo "a";;
-   b) echo "b";;
+   a) regex='[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\s[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+      if echo "$OPTARG" | grep -q "$regex"; then
+          AFTER="$OPTARG"
+          DFLAG=1
+          DAFLAG=1
+      else
+          echo "The wrong format of the date"
+          exit 1
+      fi;;
+   b) regex='[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\s[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+      if echo "$OPTARG" | grep -q "$regex"; then
+          BEFORE="$OPTARG"
+          DFLAG=1
+          DBFLAG=1
+      else
+          echo "The wrong format of the date"
+          exit 1
+      fi;;
    t) TICKER=$TICKER"$OPTARG;"
       #checking whether the format of a ticker is correct
       if echo "$OPTARG" | grep -q '[[:lower:]]'; then
@@ -335,11 +369,15 @@ while [ $# -gt 0 ]
 LOG_FILES=$(echo "$LOG_FILES" | sed '/^$/d')
 
 
-# checking flags of filters
+# checking flags of options
 if [ "$TFLAG" = "1" ]; then
     t_func
 fi
 
+if [ "$DFLAG" = "1" ]; then
+    date_func
+fi
+# checking the command among possible ones
 if [ "$COMMAND" = "list-tick" ]; then
     list_tick_func
 fi
@@ -366,8 +404,3 @@ fi
 
 echo "$LOG_FILES"
 exit 0
-
-
-# 1) to pick up flags for redirected input to output the logs
-# 2) -a|-b   : Zly format casu a datumu (spravne ma byt YYYY-MM-DD HH:MM:SS)
-# 3) if we launch just "./tradelog" there is an empty line
