@@ -115,7 +115,7 @@ last_price_func() {
           }
       };
       for (last_price in tickers) {
-          x = 11 - length(last_price);
+          x = 10 - length(last_price);
           printf("%s %"x"c %"longest".2f\n", last_price, ":", tickers[last_price])
       }
   }' | sort -u)
@@ -145,7 +145,7 @@ pos_func() {
           }
       };
       for (pos in new_tickers) {
-          x = 11 - length(pos);
+          x = 10 - length(pos);
           printf("%s %"x"c %"longest".2f\n", pos, ":", new_tickers[pos])
       }
   }' | sort -nrk3)
@@ -287,15 +287,15 @@ do case "$opts" in
       #checking whether the format of a ticker is correct
       if echo "$OPTARG" | grep -q '[[:lower:]]'; then
           echo "Invalid '-t' parameter: $OPTARG"
-          echo "Input the right name of TICKER"
+          echo "Input the right name of the TICKER"
           exit 1
       elif echo "$OPTARG" | grep -q '[[:punct:]]'; then
           echo "Invalid '-t' parameter: $OPTARG"
-          echo "Input the right name of TICKER"
+          echo "Input the right name of the TICKER"
           exit 1
       elif echo "$OPTARG" | grep -q '[[:digit:]]'; then
           echo "Invalid '-t' parameter: $OPTARG"
-          echo "Input the right name of TICKER"
+          echo "Input the right name of the TICKER"
           exit 1
       else
           TFLAG=1
@@ -310,7 +310,7 @@ do case "$opts" in
           WFLAG=1
           COUNT=$(( $COUNT - 1 ))
      else
-        echo "More occurrences of option than was expected"
+        echo "More occurrences of the option than was expected"
         exit 1
      fi;;
    h) if echo "$*" | grep -q '[-h]$'; then
