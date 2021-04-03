@@ -245,7 +245,7 @@ TICKER=""
 # For -w option
 COUNT=1
 # parsing our possible options and their parameters
-while getopts :abt:w:h-: opts
+while getopts abt:w:h-: opts
 do case "$opts" in
    a) echo "a";;
    b) echo "b";;
@@ -279,10 +279,22 @@ do case "$opts" in
         echo "More occurrences of option than was expected"
         exit 1
      fi;;
-   h) print_help
-      exit 0;;
-   -) print_help
-      exit 0;;
+   h) if echo "$*" | grep -q '[-h]$'; then
+          print_help
+          exit 0
+      else
+          echo "Invalid $* option"
+          echo "Maybe you mean '--help' or '-h'?"
+          exit 1
+      fi;;
+   -) if echo "$*" | grep -qw '\--help'; then
+          print_help
+          exit 0
+      else
+          echo "Invalid $* option"
+          echo "Maybe you mean '--help' or '-h'?"
+          exit 1
+      fi;;
    *) echo "Invalid flag"
       exit 1;;
    esac
@@ -358,4 +370,4 @@ exit 0
 
 # 1) to pick up flags for redirected input to output the logs
 # 2) -a|-b   : Zly format casu a datumu (spravne ma byt YYYY-MM-DD HH:MM:SS)
-# 3)
+# 3) if we launch just "./tradelog" there is an empty line
