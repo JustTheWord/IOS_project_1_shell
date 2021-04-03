@@ -72,8 +72,8 @@ date_func() {
         }')
   elif [ "$a" = "0" ] && [ "$b" = "1" ]; then
     LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v before="$BEFORE" '
-    { if ($1 < before) {print}
-    }')
+        { if ($1 < before) {print}
+        }')
   else
     LOG_FILES=$(echo "$LOG_FILES" | awk -F ';' -v after="$AFTER" -v before="$BEFORE" '
         { if (($1 > after) && ($1 < before)) {print}
