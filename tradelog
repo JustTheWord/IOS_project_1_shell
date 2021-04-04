@@ -258,8 +258,11 @@ graph_pos_func() {
 COMMAND=""
 WIDTH=""
 TICKER=""
+# For -a and -b options
 DAFLAG=0
 DBFLAG=0
+AFTER="0000-00-00 00:00:00"
+BEFORE="9999-99-99 99:99:99"
 # For -w option
 COUNT=1
 # parsing our possible options and their parameters
@@ -267,18 +270,24 @@ while getopts :a:b:t:w:h-: opts
 do case "$opts" in
    a) regex='[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\s[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
       if echo "$OPTARG" | grep -q "$regex"; then
-          AFTER="$OPTARG"
-          DFLAG=1
-          DAFLAG=1
+          # for finding the intersection in the case of more than one occurrence of -a and -b options
+          if (bool=$(expr "$OPTARG" \> "$AFTER"));then
+              AFTER="$OPTARG"
+              DFLAG=1
+              DAFLAG=1
+          fi
       else
           echo "The wrong format of the date"
           exit 1
       fi;;
    b) regex='[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\s[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
       if echo "$OPTARG" | grep -q "$regex"; then
-          BEFORE="$OPTARG"
-          DFLAG=1
-          DBFLAG=1
+          # for finding the intersection in the case of more than one occurrence of -a and -b options
+          if (bool=$(expr "$OPTARG" \< "$BEFORE")); then
+              BEFORE="$OPTARG"
+              DFLAG=1
+              DBFLAG=1
+          fi
       else
           echo "The wrong format of the date"
           exit 1
@@ -336,7 +345,7 @@ done
 
 shift $(($OPTIND - 1))
 
-# initialize value for the command and delete argument
+# initializing value for the command and delete argument
 case $1 in
   list-tick | profit | pos | last-price | hist-ord | graph-pos)
     COMMAND=$1
