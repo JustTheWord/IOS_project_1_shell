@@ -219,7 +219,7 @@ graph_pos_func() {
                   str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
                   printf("%-9s : %s\n", keys, str)
               }
-              else if (sharps > 0 && sharps < 1) {
+              else if (sharps > -1 && sharps < 1) {
                   printf("%-9s :\n", keys)
               }
               else {
