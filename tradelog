@@ -89,7 +89,6 @@ list_tick_func() {
 
 profit_func() {
   PROFIT=$(echo "$LOG_FILES" | awk -F ';' '
-
   BEGIN { bought=0; sold=0 }
   { if ($3 == "buy") {
         bought += ($4 * $6)
@@ -106,7 +105,6 @@ profit_func() {
 
 last_price_func() {
   LAST_PRICE=$(echo "$LOG_FILES" | awk -F ';' '
-
   { tickers[$2]=$4 }
   END {
       for (last_price in tickers) {
@@ -126,9 +124,7 @@ last_price_func() {
 
 pos_func() {
   POS=$(echo "$LOG_FILES" | awk -F ';' '
-
   { tickers[$2]=$4 }
-
   { if ($3 == "buy" ) {
       positions[$2] += $6
     }
@@ -156,9 +152,7 @@ pos_func() {
 
 hist_ord_func() {
   HIST_ORD=$(echo "$LOG_FILES" | awk -F ';' -v width="$WIDTH" '
-
   {counts[$2]+=1}
-
   END {
       if (width != "") {
           for (ticker in counts) {
@@ -190,16 +184,13 @@ hist_ord_func() {
 graph_pos_func() {
   GRAPH_POS=$(echo "$LOG_FILES" | awk -F ';' -v width="$WIDTH" '
   { tickers[$2]=$4 }
-
   { if ($3 == "buy" ) {
       positions[$2] += $6
     }
     else {positions[$2] -= $6}
   }
-
   END {
       if (width != "") {
-
           for (keys in positions) {
               new_tickers[keys] = tickers[keys] * positions[keys];
               tmp = new_tickers[keys];
@@ -211,10 +202,8 @@ graph_pos_func() {
                   average = max / width;
               }
           };
-
           for (keys in positions) {
               sharps = new_tickers[keys] / average;
-
               if (sharps > 1) {
                   str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
                   printf("%-9s : %s\n", keys, str)
@@ -235,7 +224,6 @@ graph_pos_func() {
           average = 1000
           for (keys in positions) {
               sharps = new_tickers[keys] / average;
-
               if (sharps > 1) {
                   str=sprintf("%*c", sharps, "#"); gsub(" ","#",str);
                   printf("%-9s : %s\n", keys, str)
@@ -411,5 +399,5 @@ if [ "$COMMAND" = "graph-pos" ]; then
     graph_pos_func
 fi
 
-echo "$LOG_FILES"
+printf "$LOG_FILES"
 exit 0
